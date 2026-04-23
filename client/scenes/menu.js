@@ -12,6 +12,8 @@ class MenuScene extends Scene {
     this.bgImg = null
     this.titleImg = null
     this.titleTimer = 0
+    this.animalLeftImg = null
+    this.animalRightImg = null
   }
 
   onEnter() {
@@ -50,6 +52,15 @@ class MenuScene extends Scene {
     img.onerror = () => {
       this.startImg = null
     }
+
+    // 加载按钮装饰动物图片
+    const animalLeft = wx.createImage()
+    animalLeft.src = 'images/game/cards/animals/1.png'
+    animalLeft.onload = () => { this.animalLeftImg = animalLeft }
+
+    const animalRight = wx.createImage()
+    animalRight.src = 'images/game/cards/animals/2.png'
+    animalRight.onload = () => { this.animalRightImg = animalRight }
   }
 
   onTouchStart(x, y) {
@@ -99,13 +110,56 @@ class MenuScene extends Scene {
     const btnCX = btn.x + btn.width / 2
     const btnCY = btn.y + btn.height / 2
 
+    // 先绘制动物图片（底层），再绘制按钮（上层），避免遮挡按钮
+    // 绘制左上角动物图片（1.png）—— 带晃动动效
+    if (this.animalLeftImg) {
+      const aSize = btn.height * 1.1
+      const ax = btn.x - aSize * 0.5
+      const ay = btn.y - aSize * 0.85
+      const aCX = ax + aSize / 2
+      const aCY = ay + aSize / 2
+      const angle = Math.sin(this.titleTimer / 600) * 0.15
+      const bounce = Math.sin(this.titleTimer / 400) * 3
+
+      ctx.save()
+      ctx.translate(aCX, aCY + bounce)
+      ctx.rotate(angle)
+      ctx.drawImage(this.animalLeftImg, -aSize / 2, -aSize / 2, aSize, aSize)
+      ctx.restore()
+    }
+
+    // 绘制右上角动物图片（2.png）—— 带晃动动效
+    if (this.animalRightImg) {
+      const aSize = btn.height * 1.1
+      const ax = btn.x + btn.width - aSize * 0.5
+      const ay = btn.y - aSize * 0.85
+      const aCX = ax + aSize / 2
+      const aCY = ay + aSize / 2
+      const angle = Math.sin(this.titleTimer / 600 + 1.5) * -0.15
+      const bounce = Math.sin(this.titleTimer / 400 + 1.0) * 3
+
+      ctx.save()
+      ctx.translate(aCX, aCY + bounce)
+      ctx.rotate(angle)
+      ctx.drawImage(this.animalRightImg, -aSize / 2, -aSize / 2, aSize, aSize)
+      ctx.restore()
+    }
+
+    // 绘制按钮（上层）
     ctx.save()
     ctx.translate(btnCX, btnCY)
     ctx.scale(scale, scale)
 
     if (this.startImg) {
       ctx.drawImage(this.startImg, -btn.width / 2, -btn.height / 2, btn.width, btn.height)
-    } else {
+    }
+
+    ctx.restore()
+
+    if (!this.startImg) {
+      ctx.save()
+      ctx.translate(btnCX, btnCY)
+      ctx.scale(scale, scale)
       ctx.beginPath()
       const r = 10
       const bx = -btn.width / 2
@@ -124,8 +178,8 @@ class MenuScene extends Scene {
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText(btn.text, 0, 0)
+      ctx.restore()
     }
-    ctx.restore()
   }
 }
 
