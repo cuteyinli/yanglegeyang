@@ -8,34 +8,35 @@
 module.exports = {
   title: '第一关 - 新手引导',
   iconTypes: 3,       // 3 种图标，每种 3 张 = 9 张
-  cardScale: 0.17,    // 卡牌尺寸 = 屏幕宽度 × 0.17
-  gapScale: 0.16,     // 卡牌间距 = 屏幕宽度 × 0.16
-  boardTop: 0.25,     // 棋盘顶部（屏幕高度比例）
-  layers: [
+  cardSize: 0.15,     // 卡牌尺寸 = 屏幕宽度 × 15%
+  regions: [
     {
-      layer: 0,
-      cards: [
-        { col: 0, row: 0 }, { col: 1, row: 0 }, { col: 2, row: 0 },
-        { col: 0, row: 1 }, { col: 1, row: 1 }, { col: 2, row: 1 },
-        { col: 0, row: 2 }, { col: 1, row: 2 }, { col: 2, row: 2 },
-      ]
-    },
-    {
-      layer: 1,
-      offsetRow: 0.15,
-      cards: [
-        { col: 0, row: 0 }, { col: 1, row: 0 }, { col: 2, row: 0 },
-        { col: 0, row: 1 }, { col: 1, row: 1 }, { col: 2, row: 1 },
-        { col: 0, row: 2 }, { col: 1, row: 2 }, { col: 2, row: 2 },
-      ]
-    },
-    {
-      layer: 2,
-      offsetRow: 0.3,
-      cards: [
-        { col: 0, row: 0 }, { col: 1, row: 0 }, { col: 2, row: 0 },
-        { col: 0, row: 1 }, { col: 1, row: 1 }, { col: 2, row: 1 },
-        { col: 0, row: 2 }, { col: 1, row: 2 }, { col: 2, row: 2 },
+      x: 0.06, y: 0.18,   // 左上角（相对卡牌可用区域 0~1）
+      layers: [
+        {
+          layer: 0, gapRatio: 0.9,
+          cards: [
+            { col: 0, row: 0 }, { col: 1, row: 0 }, { col: 2, row: 0 },
+            { col: 0, row: 1 }, { col: 1, row: 1 }, { col: 2, row: 1 },
+            { col: 0, row: 2 }, { col: 1, row: 2 }, { col: 2, row: 2 },
+          ]
+        },
+        {
+          layer: 1, gapRatio: 0.9, offsetRow: 0.15,
+          cards: [
+            { col: 0, row: 0 }, { col: 1, row: 0 }, { col: 2, row: 0 },
+            { col: 0, row: 1 }, { col: 1, row: 1 }, { col: 2, row: 1 },
+            { col: 0, row: 2 }, { col: 1, row: 2 }, { col: 2, row: 2 },
+          ]
+        },
+        {
+          layer: 2, gapRatio: 0.9, offsetRow: 0.3,
+          cards: [
+            { col: 0, row: 0 }, { col: 1, row: 0 }, { col: 2, row: 0 },
+            { col: 0, row: 1 }, { col: 1, row: 1 }, { col: 2, row: 1 },
+            { col: 0, row: 2 }, { col: 1, row: 2 }, { col: 2, row: 2 },
+          ]
+        }
       ]
     }
   ]

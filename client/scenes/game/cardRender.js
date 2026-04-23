@@ -6,9 +6,12 @@
 const LEVELS = require('./levels')
 
 // ==================== 屏幕比例参数（统一管理） ====================
-// 卡牌区
-// cardScale 和 gapScale 在 levels.js 中每关单独配置
-const CARD_ICON_PAD    = 0.07    // 卡牌图标内边距 = 卡牌尺寸 × 7%
+// 卡牌可用区域边界
+const BOARD_TOP        = 0.10   // 卡牌区顶部 = 屏幕高度 × 6%（标题下方）
+const BOARD_SIDE       = 0.07   // 卡牌区左右边距 = 屏幕宽度 × 4%
+const BOARD_SLOT_GAP   = 0.2   // 卡牌区底部与槽位的间距 = 屏幕高度 × 2%
+// 卡牌绘制
+const CARD_ICON_PAD    = 0.07   // 卡牌图标内边距 = 卡牌尺寸 × 7%
 const CARD_FONT_SCALE  = 0.45   // 卡牌文字字号 = 卡牌尺寸 × 45%
 
 // 槽位区
@@ -20,8 +23,8 @@ const SLOT_ICON_PAD    = 0.06   // 槽位图标内边距 = 槽位尺寸 × 6%
 const SLOT_FONT_SCALE  = 0.45   // 槽位文字字号 = 槽位尺寸 × 45%
 // ========================================================
 
-// 卡牌图标（16种动物卡牌图片）
-const ICON_COUNT = 16
+// 卡牌图标（18种动物卡牌图片）
+const ICON_COUNT = 18
 const ICON_IMGS = {}  // { '1': Image, '2': Image, ... }
 
 /** 预加载所有卡牌图片 */
@@ -44,26 +47,46 @@ function shuffle(arr) {
 
 /**
  * 根据关卡配置生成卡牌数组
- * @param {number} level    - 当前关卡号（从 1 开始）
- * @param {number} screenW  - 屏幕宽度
- * @param {number} screenH  - 屏幕高度
- * @returns {Array} cards 数组
+ *
+ * 先计算卡牌可用区域（标题下方 → 槽位上方，左右留边距），
+ * 然后区域的 x, y 基于可用区域定位（0~1 比例）。
+ *
+ * 配置层级：
+ *   关卡级：cardSize（卡牌尺寸 = 屏幕宽度 × cardSize）、iconTypes
+ *   区域级：x, y（区域左上角，相对卡牌可用区域的比例 0~1）
+ *   层级：  gapRatio、offsetCol、offsetRow、cards
  */
 function generateCards(level, screenW, screenH) {
   const levelIdx = Math.min(level - 1, LEVELS.length - 1)
   const cfg = LEVELS[levelIdx]
 
-  // 从屏幕比例计算实际像素值
-  const size = Math.round(screenW * (cfg.cardScale || 0.12))
-  const gap = Math.round(screenW * (cfg.gapScale || 0.01))
+  // 卡牌尺寸（关卡级统一）
+  const size = Math.round(screenW * cfg.cardSize)
+  const regions = cfg.regions
 
-  // 统计总卡牌数
+  // ---- 计算卡牌可用区域 ----
+  // 顶部：标题下方
+  const areaTop = screenH * BOARD_TOP
+  // 底部：槽位上方（需要反算槽位顶部位置）
+  const slotSize = Math.round(screenW * SLOT_SIZE_SCALE)
+  const slotPad = Math.round(screenW * SLOT_PAD_SCALE)
+  const slotBottom = Math.round(screenH * SLOT_BOTTOM)
+  const slotTopY = screenH - slotSize - slotBottom - slotPad * 2
+  const areaBottom = slotTopY - screenH * BOARD_SLOT_GAP
+  // 左右边距
+  const areaLeft = screenW * BOARD_SIDE
+  const areaRight = screenW * (1 - BOARD_SIDE)
+  // 可用区域宽高
+  const areaW = areaRight - areaLeft
+  const areaH = areaBottom - areaTop
+
+  // ---- 1. 统计总卡牌数 & 构建卡池 ----
   let totalCards = 0
-  for (const layerCfg of cfg.layers) {
-    totalCards += layerCfg.cards.length
+  for (const region of regions) {
+    for (const layerCfg of region.layers) {
+      totalCards += layerCfg.cards.length
+    }
   }
-
-  // 构建卡池：每种图标生成 3 的倍数张
   const triplets = Math.ceil(totalCards / 3 / cfg.iconTypes)
   const pool = []
   for (let i = 1; i <= cfg.iconTypes; i++) {
@@ -73,44 +96,36 @@ function generateCards(level, screenW, screenH) {
   }
   shuffle(pool)
 
-  // 计算网格中最大列号和行号，用于居中
-  let maxCol = 0, maxRow = 0
-  for (const layerCfg of cfg.layers) {
-    const offC = layerCfg.offsetCol || 0
-    const offR = layerCfg.offsetRow || 0
-    for (const c of layerCfg.cards) {
-      maxCol = Math.max(maxCol, c.col + offC)
-      maxRow = Math.max(maxRow, c.row + offR)
-    }
-  }
-
-  // 整体棋盘像素尺寸 & 居中
-  const cellW = size + gap
-  const cellH = size + gap
-  const boardW = maxCol * cellW + size
-  const boardH = maxRow * cellH + size
-  const startX = (screenW - boardW) / 2
-  const startY = screenH * (cfg.boardTop || 0.15)
-
-  // 按层生成卡牌
+  // ---- 2. 逐区域生成卡牌 ----
   const cards = []
   let idx = 0
-  for (const layerCfg of cfg.layers) {
-    const offC = layerCfg.offsetCol || 0
-    const offR = layerCfg.offsetRow || 0
 
-    for (const pos of layerCfg.cards) {
-      if (idx >= pool.length) break
-      cards.push({
-        icon: pool[idx],
-        x: startX + (pos.col + offC) * cellW,
-        y: startY + (pos.row + offR) * cellH,
-        width: size,
-        height: size,
-        layer: layerCfg.layer,
-        removed: false
-      })
-      idx++
+  for (const region of regions) {
+    // 区域左上角 = 可用区域原点 + 可用区域尺寸 × 比例
+    const originX = areaLeft + areaW * region.x
+    const originY = areaTop + areaH * region.y
+
+    for (const layerCfg of region.layers) {
+      const gapRatio = layerCfg.gapRatio != null ? layerCfg.gapRatio : 0.12
+      const gap = Math.round(size * gapRatio)
+      const cellW = size + gap
+      const cellH = size + gap
+      const offC = layerCfg.offsetCol || 0
+      const offR = layerCfg.offsetRow || 0
+
+      for (const pos of layerCfg.cards) {
+        if (idx >= pool.length) break
+        cards.push({
+          icon: pool[idx],
+          x: originX + (pos.col + offC) * cellW,
+          y: originY + (pos.row + offR) * cellH,
+          width: size,
+          height: size,
+          layer: layerCfg.layer,
+          removed: false
+        })
+        idx++
+      }
     }
   }
 
