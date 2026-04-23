@@ -7,20 +7,33 @@ const LEVELS = require('./levels')
 
 // ==================== 屏幕比例参数（统一管理） ====================
 // 卡牌可用区域边界
-const BOARD_TOP        = 0.10   // 卡牌区顶部 = 屏幕高度 × 6%（标题下方）
-const BOARD_SIDE       = 0.07   // 卡牌区左右边距 = 屏幕宽度 × 4%
-const BOARD_SLOT_GAP   = 0.2   // 卡牌区底部与槽位的间距 = 屏幕高度 × 2%
+const BOARD_TOP        = 0.10   // 卡牌区顶部 = 屏幕高度 × 10%（标题下方）
+const BOARD_SIDE       = 0.07   // 卡牌区左右边距 = 屏幕宽度 × 7%
+const BOARD_BOTTOM     = 0.65   // 卡牌区底部 = 屏幕高度 × 65%
 // 卡牌绘制
+const CARD_SIZE_SCALE  = 0.12   // 卡牌尺寸 = 屏幕宽度 × 12%（全局统一）
+const CARD_3D_DEPTH    = 0.1    // 3D厚度 = 卡牌尺寸 × 10%
+const CARD_RADIUS      = 8      // 卡牌圆角半径（px）
 const CARD_ICON_PAD    = 0.07   // 卡牌图标内边距 = 卡牌尺寸 × 7%
 const CARD_FONT_SCALE  = 0.45   // 卡牌文字字号 = 卡牌尺寸 × 45%
+const CARD_BLOCKED_THR = 0.1    // 遮挡判定阈值 = 重叠面积 ÷ 卡牌面积
 
 // 槽位区
+const SLOT_TOP         = 0.82   // 槽位区顶部 = 屏幕高度 × 82%
 const SLOT_SIZE_SCALE  = 0.11   // 槽位卡牌尺寸 = 屏幕宽度 × 11%
 const SLOT_GAP_SCALE   = 0.015  // 槽位间距   = 屏幕宽度 × 1.5%
 const SLOT_PAD_SCALE   = 0.02   // 槽位背景内边距 = 屏幕宽度 × 2%
-const SLOT_BOTTOM      = 0.04   // 槽位底部边距 = 屏幕高度 × 4%
 const SLOT_ICON_PAD    = 0.06   // 槽位图标内边距 = 槽位尺寸 × 6%
 const SLOT_FONT_SCALE  = 0.45   // 槽位文字字号 = 槽位尺寸 × 45%
+
+// 道具区
+const PROP_TOP         = 0.90   // 道具区顶部 = 屏幕高度 × 90%
+const PROP_SIZE_SCALE  = 0.2    // 道具按钮尺寸 = 屏幕宽度 × 20%
+const PROP_GAP_SCALE   = 0.08   // 道具按钮间距 = 屏幕宽度 × 8%
+const PROP_COUNT       = 3      // 道具数量（移出 / 撤回 / 洗牌）
+const PROP_RADIUS      = 10     // 道具按钮圆角半径（px）
+const PROP_FONT_SCALE  = 0.28   // 道具按钮文字字号 = 按钮尺寸 × 28%
+const PROP_LABEL_Y     = 0.72   // 道具文字纵向位置 = 按钮顶部 + 按钮尺寸 × 72%
 // ========================================================
 
 // 卡牌图标（18种动物卡牌图片）
@@ -52,7 +65,7 @@ function shuffle(arr) {
  * 然后区域的 x, y 基于可用区域定位（0~1 比例）。
  *
  * 配置层级：
- *   关卡级：cardSize（卡牌尺寸 = 屏幕宽度 × cardSize）、iconTypes
+ *   关卡级：iconTypes
  *   区域级：x, y（区域左上角，相对卡牌可用区域的比例 0~1）
  *   层级：  gapRatio、offsetCol、offsetRow、cards
  */
@@ -60,19 +73,13 @@ function generateCards(level, screenW, screenH) {
   const levelIdx = Math.min(level - 1, LEVELS.length - 1)
   const cfg = LEVELS[levelIdx]
 
-  // 卡牌尺寸（关卡级统一）
-  const size = Math.round(screenW * cfg.cardSize)
+  // 卡牌尺寸（全局统一）
+  const size = Math.round(screenW * CARD_SIZE_SCALE)
   const regions = cfg.regions
 
   // ---- 计算卡牌可用区域 ----
-  // 顶部：标题下方
   const areaTop = screenH * BOARD_TOP
-  // 底部：槽位上方（需要反算槽位顶部位置）
-  const slotSize = Math.round(screenW * SLOT_SIZE_SCALE)
-  const slotPad = Math.round(screenW * SLOT_PAD_SCALE)
-  const slotBottom = Math.round(screenH * SLOT_BOTTOM)
-  const slotTopY = screenH - slotSize - slotBottom - slotPad * 2
-  const areaBottom = slotTopY - screenH * BOARD_SLOT_GAP
+  const areaBottom = screenH * BOARD_BOTTOM
   // 左右边距
   const areaLeft = screenW * BOARD_SIDE
   const areaRight = screenW * (1 - BOARD_SIDE)
@@ -87,11 +94,18 @@ function generateCards(level, screenW, screenH) {
       totalCards += layerCfg.cards.length
     }
   }
+
+  // 从 ICON_COUNT 种图标中随机挑选 iconTypes 种
+  const allIcons = []
+  for (let i = 1; i <= ICON_COUNT; i++) allIcons.push(String(i))
+  shuffle(allIcons)
+  const selectedIcons = allIcons.slice(0, cfg.iconTypes)
+
   const triplets = Math.ceil(totalCards / 3 / cfg.iconTypes)
   const pool = []
-  for (let i = 1; i <= cfg.iconTypes; i++) {
+  for (const icon of selectedIcons) {
     for (let j = 0; j < triplets * 3; j++) {
-      pool.push(String(i))
+      pool.push(icon)
     }
   }
   shuffle(pool)
@@ -139,7 +153,7 @@ function generateCards(level, screenW, screenH) {
  * @returns {boolean}
  */
 function isBlocked(card, cards) {
-  const threshold = card.width * card.height * 0.15
+  const threshold = card.width * card.height * CARD_BLOCKED_THR
   for (const other of cards) {
     if (other.removed || other.layer <= card.layer) continue
     const overlapX = Math.max(0, Math.min(card.x + card.width, other.x + other.width) - Math.max(card.x, other.x))
@@ -168,10 +182,10 @@ function roundRect(ctx, x, y, w, h, r) {
  * @param {Array} cards
  */
 function renderCards(ctx, cards) {
-  const depth = 10  // 3D厚度（像素）
-  const radius = 8  // 圆角半径
+  const radius = CARD_RADIUS
 
   for (const card of cards) {
+    const depth = Math.round(card.width * CARD_3D_DEPTH)
     if (card.removed) continue
     const blocked = isBlocked(card, cards)
 
@@ -226,12 +240,11 @@ function renderSlots(ctx, slots, config) {
   // 所有尺寸基于屏幕比例计算
   const slotSize = Math.round(width * SLOT_SIZE_SCALE)
   const slotGap = Math.round(width * SLOT_GAP_SCALE)
-  const bottomMargin = Math.round(height * SLOT_BOTTOM)
   const padding = Math.round(width * SLOT_PAD_SCALE)
 
   const totalSlotWidth = maxSlots * (slotSize + slotGap)
   const slotStartX = (width - totalSlotWidth) / 2
-  const slotY = height - slotSize - bottomMargin - padding * 2
+  const slotY = Math.round(height * SLOT_TOP)
 
   // 槽位背景
   ctx.fillStyle = 'rgba(0,0,0,0.5)'
@@ -281,12 +294,11 @@ function getSlotPosition(index, config) {
   const { width, height } = config
   const slotSize = Math.round(width * SLOT_SIZE_SCALE)
   const slotGap = Math.round(width * SLOT_GAP_SCALE)
-  const bottomMargin = Math.round(height * SLOT_BOTTOM)
   const padding = Math.round(width * SLOT_PAD_SCALE)
   const maxSlots = 7
   const totalSlotWidth = maxSlots * (slotSize + slotGap)
   const slotStartX = (width - totalSlotWidth) / 2
-  const slotY = height - slotSize - bottomMargin - padding * 2
+  const slotY = Math.round(height * SLOT_TOP)
   return {
     x: slotStartX + index * (slotSize + slotGap),
     y: slotY,
@@ -299,6 +311,76 @@ function getIconImg(icon) {
   return ICON_IMGS[icon] || null
 }
 
+// ==================== 道具区 ====================
+
+const PROP_LABELS = ['移出', '撤回', '洗牌']
+
+/**
+ * 渲染道具区（3 个按钮水平居中）
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {Object} config - { width, height }
+ */
+function renderProps(ctx, config) {
+  const { width, height } = config
+  const btnSize = Math.round(width * PROP_SIZE_SCALE)
+  const btnGap = Math.round(width * PROP_GAP_SCALE)
+  const topY = Math.round(height * PROP_TOP)
+
+  const totalW = PROP_COUNT * btnSize + (PROP_COUNT - 1) * btnGap
+  const startX = (width - totalW) / 2
+
+  const radius = PROP_RADIUS
+  const fontSize = Math.round(btnSize * PROP_FONT_SCALE)
+
+  for (let i = 0; i < PROP_COUNT; i++) {
+    const bx = startX + i * (btnSize + btnGap)
+    const by = topY
+
+    // 按钮背景（圆角矩形）
+    ctx.fillStyle = 'rgba(50,130,220,0.85)'
+    ctx.beginPath()
+    ctx.moveTo(bx + radius, by)
+    ctx.arcTo(bx + btnSize, by, bx + btnSize, by + btnSize, radius)
+    ctx.arcTo(bx + btnSize, by + btnSize, bx, by + btnSize, radius)
+    ctx.arcTo(bx, by + btnSize, bx, by, radius)
+    ctx.arcTo(bx, by, bx + btnSize, by, radius)
+    ctx.closePath()
+    ctx.fill()
+
+    // 按钮边框
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)'
+    ctx.lineWidth = 1.5
+    ctx.stroke()
+
+    // 文字标签
+    ctx.fillStyle = '#ffffff'
+    ctx.font = 'bold ' + fontSize + 'px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(PROP_LABELS[i], bx + btnSize / 2, by + btnSize * PROP_LABEL_Y)
+  }
+}
+
+/**
+ * 获取道具按钮的位置信息（用于点击检测）
+ * @param {number} index   - 按钮索引 0/1/2
+ * @param {Object} config  - { width, height }
+ * @returns {{ x, y, size }}
+ */
+function getPropPosition(index, config) {
+  const { width, height } = config
+  const btnSize = Math.round(width * PROP_SIZE_SCALE)
+  const btnGap = Math.round(width * PROP_GAP_SCALE)
+  const topY = Math.round(height * PROP_TOP)
+  const totalW = PROP_COUNT * btnSize + (PROP_COUNT - 1) * btnGap
+  const startX = (width - totalW) / 2
+  return {
+    x: startX + index * (btnSize + btnGap),
+    y: topY,
+    size: btnSize
+  }
+}
+
 module.exports = {
   preloadImages,
   generateCards,
@@ -306,5 +388,7 @@ module.exports = {
   renderCards,
   renderSlots,
   getSlotPosition,
-  getIconImg
+  getIconImg,
+  renderProps,
+  getPropPosition
 }

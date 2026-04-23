@@ -7,7 +7,6 @@
  * 每个关卡文件包含：
  *   title     - 关卡标题（用于 HUD 显示）
  *   iconTypes - 使用的图标种类数
- *   cardSize  - 卡牌尺寸 = 屏幕宽度 × cardSize（关卡级统一）
  *   regions   - 多区域布局数组，每个 region 包含：
  *     x, y    - 区域左上角（相对卡牌可用区域的比例 0~1）
  *     layers  - 该区域的卡牌层数据，每层包含：

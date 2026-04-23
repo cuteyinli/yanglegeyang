@@ -8,10 +8,9 @@
 module.exports = {
   title: '第一关 - 新手引导',
   iconTypes: 3,       // 3 种图标，每种 3 张 = 9 张
-  cardSize: 0.15,     // 卡牌尺寸 = 屏幕宽度 × 15%
   regions: [
     {
-      x: 0.06, y: 0.18,   // 左上角（相对卡牌可用区域 0~1）
+      x: 0.15, y: 0.3,   // 左上角（相对卡牌可用区域 0~1）
       layers: [
         {
           layer: 0, gapRatio: 0.9,

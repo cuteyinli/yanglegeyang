@@ -29,9 +29,10 @@ class LoadingScene extends Scene {
 
   _loadResources() {
     const images = [
-      'images/bg.png',
-      'images/card_bg.png',
-      'images/icons.png'
+      'images/menu/bgs/menu_bg01.png',
+      'images/menu/buttons/button_start.png',
+      'images/menu/titles/title.png',
+      'images/game/bgs/game_bg01.png'
     ]
     let loadedCount = 0
     const totalCount = images.length

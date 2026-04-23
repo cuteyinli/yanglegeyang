@@ -13,24 +13,23 @@
 module.exports = {
   title: '第二关 - 挑战开始',
   iconTypes: 8,
-  cardSize: 0.07,     // 卡牌尺寸 = 屏幕宽度 × 7%
   regions: [
     // ==================== 主区域：中央金字塔 ====================
     {
-      x: 0.12, y: 0.0,  // 左上角（相对卡牌可用区域 0~1）
+      x: 0.12, y: 0.1,  // 左上角（相对卡牌可用区域 0~1）
       layers: [
-        {
-          // 底层：5×5 = 25 张
-          layer: 0,
-          gapRatio: 0.1,
-          cards: [
-            { col: 0, row: 0 }, { col: 1, row: 0 }, { col: 2, row: 0 }, { col: 3, row: 0 }, { col: 4, row: 0 },
-            { col: 0, row: 1 }, { col: 1, row: 1 }, { col: 2, row: 1 }, { col: 3, row: 1 }, { col: 4, row: 1 },
-            { col: 0, row: 2 }, { col: 1, row: 2 }, { col: 2, row: 2 }, { col: 3, row: 2 }, { col: 4, row: 2 },
-            { col: 0, row: 3 }, { col: 1, row: 3 }, { col: 2, row: 3 }, { col: 3, row: 3 }, { col: 4, row: 3 },
-            { col: 0, row: 4 }, { col: 1, row: 4 }, { col: 2, row: 4 }, { col: 3, row: 4 }, { col: 4, row: 4 },
-          ]
-        },
+        // {
+        //   // 底层：5×5 = 25 张
+        //   layer: 0,
+        //   gapRatio: 0.1,
+        //   cards: [
+        //     { col: 0, row: 0 }, { col: 1, row: 0 }, { col: 2, row: 0 }, { col: 3, row: 0 }, { col: 4, row: 0 },
+        //     { col: 0, row: 1 }, { col: 1, row: 1 }, { col: 2, row: 1 }, { col: 3, row: 1 }, { col: 4, row: 1 },
+        //     { col: 0, row: 2 }, { col: 1, row: 2 }, { col: 2, row: 2 }, { col: 3, row: 2 }, { col: 4, row: 2 },
+        //     { col: 0, row: 3 }, { col: 1, row: 3 }, { col: 2, row: 3 }, { col: 3, row: 3 }, { col: 4, row: 3 },
+        //     { col: 0, row: 4 }, { col: 1, row: 4 }, { col: 2, row: 4 }, { col: 3, row: 4 }, { col: 4, row: 4 },
+        //   ]
+        // },
         {
           // 第二层：5×4 = 20 张，半卡交错
           layer: 1,

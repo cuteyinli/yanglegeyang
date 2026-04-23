@@ -19,7 +19,7 @@ class MenuScene extends Scene {
   onEnter() {
     // 加载标题图片
     const titleImg = wx.createImage()
-    titleImg.src = 'images/menu/title.png'
+    titleImg.src = 'images/menu/titles/title.png'
     titleImg.onload = () => { this.titleImg = titleImg }
 
     const btnWidth = this.width * 0.5
@@ -55,11 +55,11 @@ class MenuScene extends Scene {
 
     // 加载按钮装饰动物图片
     const animalLeft = wx.createImage()
-    animalLeft.src = 'images/game/cards/animals/1.png'
+    animalLeft.src = 'images/menu/elements/animal_left.png'
     animalLeft.onload = () => { this.animalLeftImg = animalLeft }
 
     const animalRight = wx.createImage()
-    animalRight.src = 'images/game/cards/animals/2.png'
+    animalRight.src = 'images/menu/elements/animal_right.png'
     animalRight.onload = () => { this.animalRightImg = animalRight }
   }
 

@@ -2,6 +2,7 @@ const Scene = require('./base')
 const LEVELS = require('./game/levels')
 const cardRender = require('./game/cardRender')
 const gameLogic = require('./game/gameLogic')
+const props = require('./game/props/index')
 
 /**
  * 游戏核心场景
@@ -41,7 +42,14 @@ class GameScene extends Scene {
     this.showConfirm = false // 退出确认弹窗
   }
 
+  /** 从菜单进入时重置关卡 */
   onEnter() {
+    this.level = 1
+    this._startLevel()
+  }
+
+  /** 开始当前关卡（不重置 level） */
+  _startLevel() {
     this.cards = []
     this.slots = []
     this.gameOver = false
@@ -104,11 +112,20 @@ class GameScene extends Scene {
       if (this.gameWin && this._nextLevel) {
         this._nextLevel = false
         this.level++
-        this.onEnter()
+        this._startLevel()
       } else {
         if (this.onBack) this.onBack()
       }
       return
+    }
+
+    // 道具区点击检测
+    for (let i = 0; i < 3; i++) {
+      const btn = cardRender.getPropPosition(i, { width: this.width, height: this.height })
+      if (x >= btn.x && x <= btn.x + btn.size && y >= btn.y && y <= btn.y + btn.size) {
+        props.use(i, { cards: this.cards, slots: this.slots })
+        return
+      }
     }
 
     // 动画进行中不响应点击
@@ -301,6 +318,9 @@ class GameScene extends Scene {
       width, height,
       maxSlots: this.maxSlots
     })
+
+    // 绘制道具区
+    cardRender.renderProps(ctx, { width, height })
 
     // 绘制飞行动画中的卡牌
     for (const anim of this.anims) {
