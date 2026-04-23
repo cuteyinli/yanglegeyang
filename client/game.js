@@ -7,14 +7,15 @@ const GameScene = require('./scenes/game')
 // 初始化画布
 const canvas = wx.createCanvas()
 const ctx = canvas.getContext('2d')
-const systemInfo = wx.getSystemInfoSync()
+const windowInfo = wx.getWindowInfo()
+const deviceInfo = wx.getDeviceInfo()
 
 // 存入全局
 GameGlobal.canvas = canvas
 GameGlobal.ctx = ctx
-GameGlobal.screenWidth = systemInfo.screenWidth
-GameGlobal.screenHeight = systemInfo.screenHeight
-GameGlobal.pixelRatio = systemInfo.pixelRatio
+GameGlobal.screenWidth = windowInfo.screenWidth
+GameGlobal.screenHeight = windowInfo.screenHeight
+GameGlobal.pixelRatio = windowInfo.pixelRatio || deviceInfo.pixelRatio
 
 // ==================== 场景管理 ====================
 let currentScene = null
