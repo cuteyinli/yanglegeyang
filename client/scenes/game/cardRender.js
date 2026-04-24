@@ -186,15 +186,42 @@ function roundRect(ctx, x, y, w, h, r) {
 /**
  * 绘制棋盘区所有卡牌
  * @param {CanvasRenderingContext2D} ctx
- * @param {Array} cards
+ * @param {Array}  cards     - 所有卡牌
+ * @param {Array}  [peekCards] - 透视中的卡牌引用
+ * @param {number} [peekTimer] - 透视剩余时间 ms
  */
-function renderCards(ctx, cards) {
+function renderCards(ctx, cards, peekCards, peekTimer) {
   const radius = CARD_RADIUS
+  const peeking = peekCards && peekCards.length > 0 && peekTimer > 0
+  // 透视透明度：前 300ms 淡出，中间保持透明，后 300ms 淡入
+  let peekAlpha = 1
+  if (peeking) {
+    const FADE = 300  // 淡入淡出时长 ms
+    const TOTAL = 3000
+    const elapsed = TOTAL - peekTimer
+    if (elapsed < FADE) {
+      // 淡出阶段：1 → 0.1
+      peekAlpha = 1 - 0.9 * (elapsed / FADE)
+    } else if (peekTimer < FADE) {
+      // 淡入阶段：0.1 → 1
+      peekAlpha = 0.1 + 0.9 * (1 - peekTimer / FADE)
+    } else {
+      // 中间保持透明
+      peekAlpha = 0.1
+    }
+  }
+  const peekSet = peeking ? new Set(peekCards) : null
 
   for (const card of cards) {
     const depth = Math.round(card.width * CARD_3D_DEPTH)
     if (card.removed) continue
     const blocked = isBlocked(card, cards)
+    const isPeek = peekSet && peekSet.has(card)
+
+    // 透视卡牌设置透明度
+    if (isPeek) {
+      ctx.globalAlpha = peekAlpha
+    }
 
     // 卡牌侧面（底部厚度）
     ctx.fillStyle = blocked ? '#4a5354' : '#b8923a'
@@ -231,6 +258,11 @@ function renderCards(ctx, cards) {
       ctx.textBaseline = 'middle'
       ctx.fillStyle = blocked ? '#999999' : '#000000'
       ctx.fillText(card.icon, card.x + card.width / 2, card.y + card.height / 2)
+    }
+
+    // 透视卡牌恢复透明度
+    if (isPeek) {
+      ctx.globalAlpha = 1.0
     }
   }
 }

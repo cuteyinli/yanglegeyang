@@ -42,6 +42,9 @@ class GameScene extends Scene {
     this.history = []  // 撤回历史栈
     this.stash = []    // 暂存区（移出道具）
     this.toast = null   // 屏幕提示 { text, progress, duration }
+    this.peekMode = false  // 透视模式：等待点击卡牌
+    this.peekCards = []    // 透视中的卡牌引用
+    this.peekTimer = 0     // 透视剩余时间 ms
     this.showConfirm = false // 退出确认弹窗
   }
 
@@ -149,7 +152,10 @@ class GameScene extends Scene {
       const btn = cardRender.getPropPosition(i, { width: this.width, height: this.height })
       if (x >= btn.x && x <= btn.x + btn.size && y >= btn.y && y <= btn.y + btn.size) {
         const result = props.use(i, { cards: this.cards, slots: this.slots, history: this.history, stash: this.stash })
-        if (typeof result === 'string') {
+        if (result === 'peek') {
+          this.peekMode = true
+          this._showToast('请点击一张顶层卡牌')
+        } else if (typeof result === 'string') {
           this._showToast(result)
         }
         return
@@ -158,6 +164,19 @@ class GameScene extends Scene {
 
     // 动画进行中不响应点击
     if (this.anims.length > 0) return
+
+    // 透视模式：点击顶层卡牌触发透视
+    if (this.peekMode) {
+      const card = gameLogic.handleTouch(x, y, this.cards)
+      if (card) {
+        this._activatePeek(card)
+      } else {
+        // 点击空白取消透视模式
+        this.peekMode = false
+        this._showToast('透视已取消')
+      }
+      return
+    }
 
     // 点击检测
     const card = gameLogic.handleTouch(x, y, this.cards)
@@ -233,6 +252,15 @@ class GameScene extends Scene {
       }
     }
 
+    // 更新透视计时器
+    if (this.peekTimer > 0) {
+      this.peekTimer -= dt
+      if (this.peekTimer <= 0) {
+        this.peekTimer = 0
+        this.peekCards = []
+      }
+    }
+
     // 更新屏幕提示
     if (this.toast) {
       this.toast.progress += dt
@@ -265,6 +293,43 @@ class GameScene extends Scene {
   /** 显示屏幕提示 */
   _showToast(text) {
     this.toast = { text: text, progress: 0, duration: 1500 }
+  }
+
+  /**
+   * 激活透视效果
+   * 点击的顶层卡牌 + 周围 3×3 区域内其他顶层卡牌变透明，
+   * 显示它们正下方的下一层卡牌。
+   */
+  _activatePeek(centerCard) {
+    this.peekMode = false
+    const size = centerCard.width
+    // 3×3 区域范围：以点击卡牌中心向外扩展 1 个卡牌尺寸
+    const cx = centerCard.x + size / 2
+    const cy = centerCard.y + size / 2
+    const range = size * 1.5
+
+    // 收集区域内所有未移除卡牌
+    const inRange = []
+    for (const card of this.cards) {
+      if (card.removed) continue
+      const cardCx = card.x + card.width / 2
+      const cardCy = card.y + card.height / 2
+      if (Math.abs(cardCx - cx) < range && Math.abs(cardCy - cy) < range) {
+        inRange.push(card)
+      }
+    }
+
+    // 找出区域内所有顶层卡牌（未被更高层遮挡的）
+    const peekCards = []
+    for (const card of inRange) {
+      if (!cardRender.isBlocked(card, this.cards)) {
+        peekCards.push(card)
+      }
+    }
+
+    this.peekCards = peekCards
+    this.peekTimer = 3000  // 3 秒
+    console.log('[透视] 激活，透视 ' + peekCards.length + ' 张顶层卡牌')
   }
 
   /** 生成消除特效和粒子 */
@@ -356,7 +421,7 @@ class GameScene extends Scene {
     ctx.fillText(LEVELS[levelIdx].title, width / 2, height * TITLE_TOP)
 
     // 绘制卡牌
-    cardRender.renderCards(ctx, this.cards)
+    cardRender.renderCards(ctx, this.cards, this.peekCards, this.peekTimer)
 
     // 绘制槽位
     cardRender.renderSlots(ctx, this.slots, {
