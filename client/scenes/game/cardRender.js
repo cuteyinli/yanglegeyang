@@ -18,6 +18,13 @@ const CARD_ICON_PAD    = 0.07   // 卡牌图标内边距 = 卡牌尺寸 × 7%
 const CARD_FONT_SCALE  = 0.45   // 卡牌文字字号 = 卡牌尺寸 × 45%
 const CARD_BLOCKED_THR = 0.1    // 遮挡判定阈值 = 重叠面积 ÷ 卡牌面积
 
+// 暂存区（移出道具）
+const STASH_TOP        = 0.76   // 暂存区顶部 = 屏幕高度 × 76%
+const STASH_SIZE_SCALE = 0.09   // 暂存卡牌尺寸 = 屏幕宽度 × 9%
+const STASH_GAP_SCALE  = 0.015  // 暂存卡牌间距 = 屏幕宽度 × 1.5%
+const STASH_PAD_SCALE  = 0.015  // 暂存背景内边距
+const STASH_ICON_PAD   = 0.06   // 暂存卡牌图标内边距
+
 // 槽位区
 const SLOT_TOP         = 0.82   // 槽位区顶部 = 屏幕高度 × 82%
 const SLOT_SIZE_SCALE  = 0.11   // 槽位卡牌尺寸 = 屏幕宽度 × 11%
@@ -381,6 +388,83 @@ function getPropPosition(index, config) {
   }
 }
 
+// ==================== 暂存区 ====================
+
+/**
+ * 渲染暂存区（移出道具将槽位卡牌移到此处）
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {Array}  stash  - 暂存卡牌数据
+ * @param {Object} config - { width, height }
+ */
+function renderStash(ctx, stash, config) {
+  if (!stash || stash.length === 0) return
+
+  const { width, height } = config
+  const cardSize = Math.round(width * STASH_SIZE_SCALE)
+  const gap = Math.round(width * STASH_GAP_SCALE)
+  const padding = Math.round(width * STASH_PAD_SCALE)
+  const topY = Math.round(height * STASH_TOP)
+
+  const totalW = stash.length * (cardSize + gap) - gap
+  const startX = (width - totalW) / 2
+
+  // 暂存区背景
+  ctx.fillStyle = 'rgba(0,0,0,0.35)'
+  roundRect(ctx, startX - padding, topY - padding,
+    totalW + padding * 2, cardSize + padding * 2, 6)
+  ctx.fill()
+
+  // 绘制暂存卡牌
+  for (let i = 0; i < stash.length; i++) {
+    const sx = startX + i * (cardSize + gap)
+    ctx.fillStyle = '#fffdf5'
+    roundRect(ctx, sx, topY, cardSize, cardSize, 4)
+    ctx.fill()
+    ctx.strokeStyle = '#c8a96e'
+    ctx.lineWidth = 1
+    roundRect(ctx, sx, topY, cardSize, cardSize, 4)
+    ctx.stroke()
+
+    const iconImg = ICON_IMGS[stash[i].icon]
+    if (iconImg) {
+      const pad = cardSize * STASH_ICON_PAD
+      ctx.save()
+      roundRect(ctx, sx, topY, cardSize, cardSize, 4)
+      ctx.clip()
+      ctx.drawImage(iconImg, sx + pad, topY + pad, cardSize - pad * 2, cardSize - pad * 2)
+      ctx.restore()
+    } else {
+      const fontSize = Math.round(cardSize * 0.45)
+      ctx.font = fontSize + 'px sans-serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillStyle = '#000000'
+      ctx.fillText(stash[i].icon, sx + cardSize / 2, topY + cardSize / 2)
+    }
+  }
+}
+
+/**
+ * 获取暂存区卡牌的位置信息（用于点击检测）
+ * @param {number} index      - 卡牌索引
+ * @param {number} stashCount - 暂存区卡牌总数
+ * @param {Object} config     - { width, height }
+ * @returns {{ x, y, size }}
+ */
+function getStashPosition(index, stashCount, config) {
+  const { width, height } = config
+  const cardSize = Math.round(width * STASH_SIZE_SCALE)
+  const gap = Math.round(width * STASH_GAP_SCALE)
+  const topY = Math.round(height * STASH_TOP)
+  const totalW = stashCount * (cardSize + gap) - gap
+  const startX = (width - totalW) / 2
+  return {
+    x: startX + index * (cardSize + gap),
+    y: topY,
+    size: cardSize
+  }
+}
+
 module.exports = {
   preloadImages,
   generateCards,
@@ -390,5 +474,7 @@ module.exports = {
   getSlotPosition,
   getIconImg,
   renderProps,
-  getPropPosition
+  getPropPosition,
+  renderStash,
+  getStashPosition
 }

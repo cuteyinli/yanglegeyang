@@ -39,6 +39,9 @@ class GameScene extends Scene {
     this.anims = []  // 飞行动画队列
     this.matchFx = []  // 消除特效
     this.particles = [] // 粒子效果
+    this.history = []  // 撤回历史栈
+    this.stash = []    // 暂存区（移出道具）
+    this.toast = null   // 屏幕提示 { text, progress, duration }
     this.showConfirm = false // 退出确认弹窗
   }
 
@@ -55,6 +58,8 @@ class GameScene extends Scene {
     this.gameOver = false
     this.gameWin = false
     this._nextLevel = false
+    this.history = []
+    this.stash = []
 
     // 加载背景图
     const bg = wx.createImage()
@@ -119,11 +124,34 @@ class GameScene extends Scene {
       return
     }
 
+    // 暂存区点击检测：点击暂存卡牌回归槽位
+    for (let i = 0; i < this.stash.length; i++) {
+      const pos = cardRender.getStashPosition(i, this.stash.length, { width: this.width, height: this.height })
+      if (x >= pos.x && x <= pos.x + pos.size && y >= pos.y && y <= pos.y + pos.size) {
+        if (this.slots.length >= this.maxSlots) return  // 槽位已满
+        const card = this.stash.splice(i, 1)[0]
+        this.slots.push(card)
+        // 记录撤回历史（标记来源为暂存区）
+        this.history.push({ card: card, fromStash: true })
+        // 检查三消
+        const oldSlots = this.slots.slice()
+        this.slots = gameLogic.checkMatch(this.slots)
+        if (this.slots.length < oldSlots.length) {
+          this._spawnMatchFx(oldSlots, this.slots)
+          this.history = []
+        }
+        return;
+      }
+    }
+    
     // 道具区点击检测
     for (let i = 0; i < 4; i++) {
       const btn = cardRender.getPropPosition(i, { width: this.width, height: this.height })
       if (x >= btn.x && x <= btn.x + btn.size && y >= btn.y && y <= btn.y + btn.size) {
-        props.use(i, { cards: this.cards, slots: this.slots })
+        const result = props.use(i, { cards: this.cards, slots: this.slots, history: this.history, stash: this.stash })
+        if (typeof result === 'string') {
+          this._showToast(result)
+        }
         return
       }
     }
@@ -180,17 +208,21 @@ class GameScene extends Scene {
         // 动画结束，正式放入槽位
         this.slots.splice(anim.insertIdx, 0, { icon: anim.icon })
 
+        // 记录撤回历史（保存卡牌引用和插入位置）
+        this.history.push({ card: anim.card, insertIdx: anim.insertIdx })
+
         // 三消检查（带动效）
         const oldSlots = this.slots.slice()
         this.slots = gameLogic.checkMatch(this.slots)
 
-        // 如果有消除，生成消除特效
+        // 如果有消除，生成消除特效并清空撤回历史（已消除无法撤回）
         if (this.slots.length < oldSlots.length) {
           this._spawnMatchFx(oldSlots, this.slots)
+          this.history = []
         }
 
         // 输赢判定
-        const result = gameLogic.checkResult(this.cards, this.slots, this.maxSlots)
+        const result = gameLogic.checkResult(this.cards, this.slots, this.maxSlots, this.stash)
         this.gameOver = result.gameOver
         this.gameWin = result.gameWin
         if (this.gameWin && this.level < LEVELS.length) {
@@ -198,6 +230,14 @@ class GameScene extends Scene {
         }
 
         this.anims.splice(i, 1)
+      }
+    }
+
+    // 更新屏幕提示
+    if (this.toast) {
+      this.toast.progress += dt
+      if (this.toast.progress >= this.toast.duration) {
+        this.toast = null
       }
     }
 
@@ -220,6 +260,11 @@ class GameScene extends Scene {
         this.particles.splice(i, 1)
       }
     }
+  }
+
+  /** 显示屏幕提示 */
+  _showToast(text) {
+    this.toast = { text: text, progress: 0, duration: 1500 }
   }
 
   /** 生成消除特效和粒子 */
@@ -319,6 +364,9 @@ class GameScene extends Scene {
       maxSlots: this.maxSlots
     })
 
+    // 绘制暂存区
+    cardRender.renderStash(ctx, this.stash, { width, height })
+
     // 绘制道具区
     cardRender.renderProps(ctx, { width, height })
 
@@ -381,6 +429,42 @@ class GameScene extends Scene {
       ctx.beginPath()
       ctx.arc(p.x, p.y, p.radius * (1 - t * 0.5), 0, Math.PI * 2)
       ctx.fill()
+      ctx.restore()
+    }
+
+    // 屏幕提示（Toast）
+    if (this.toast) {
+      const t = this.toast.progress / this.toast.duration
+      // 前 20% 淡入，后 30% 淡出
+      let alpha = 1
+      if (t < 0.2) alpha = t / 0.2
+      else if (t > 0.7) alpha = (1 - t) / 0.3
+
+      const toastFont = Math.round(width * 0.04)
+      ctx.save()
+      ctx.globalAlpha = alpha
+      ctx.font = 'bold ' + toastFont + 'px sans-serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      // 背景胶囊
+      const txt = this.toast.text
+      const tw = ctx.measureText(txt).width + toastFont * 1.5
+      const th = toastFont * 2.2
+      const tx = (width - tw) / 2
+      const ty = height * 0.4 - th / 2
+      ctx.fillStyle = 'rgba(0,0,0,0.7)'
+      ctx.beginPath()
+      const tr = th / 2
+      ctx.moveTo(tx + tr, ty)
+      ctx.arcTo(tx + tw, ty, tx + tw, ty + th, tr)
+      ctx.arcTo(tx + tw, ty + th, tx, ty + th, tr)
+      ctx.arcTo(tx, ty + th, tx, ty, tr)
+      ctx.arcTo(tx, ty, tx + tw, ty, tr)
+      ctx.closePath()
+      ctx.fill()
+      // 文字
+      ctx.fillStyle = '#ffffff'
+      ctx.fillText(txt, width / 2, height * 0.4)
       ctx.restore()
     }
 

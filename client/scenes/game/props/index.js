@@ -23,10 +23,10 @@ const PROPS = [moveOut, undo, shuffle, peek]
  * 使用指定道具
  * @param {number} index - 道具索引 0/1/2/3
  * @param {Object} state - 游戏状态 { cards, slots, history, stash }
- * @returns {boolean} 是否成功使用
+ * @returns {boolean|string} true=成功，字符串=失败原因
  */
 function use(index, state) {
-  if (index < 0 || index >= PROPS.length) return false
+  if (index < 0 || index >= PROPS.length) return '无效道具'
   return PROPS[index].use(state)
 }
 
